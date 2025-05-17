@@ -1,0 +1,108 @@
+#include <Arduino.h>
+#include <HardwareSerial.h>
+
+#pragma pack(1) // Disable padding
+struct CONTROLLER_READOUT {
+	struct {
+		uint8_t A0, A3;
+		uint8_t PB10, A4, B13;
+		uint8_t A5;
+	}LS; // left shoulder
+	struct {
+		uint8_t B12, A6, B2, A7;
+	}LD; // left dpad
+
+	struct {
+		uint8_t C13, A1;
+		uint8_t A12, B9, PB11;
+		uint8_t B8;
+	}RS; // right shoulder
+	struct {
+		uint8_t B3, B5, A15, B4;
+	}RD; // right dpad
+
+	struct {
+		uint8_t A2, C15, C14;
+	}ALT; // alternate button
+
+	struct {
+		uint8_t BTN;
+		uint16_t VALUE[2];
+	}JOY; // joystick
+
+	struct {
+		uint8_t BTN;
+		uint8_t VALUE;
+	}ENC; // encoder
+
+} controller;
+#pragma pack() // Restore default alignment
+
+void setup() {
+  Serial2.begin(115200);
+  Serial.begin(115200);
+}
+
+// Constants for start and end markers
+const uint8_t START_MARKER = 0x7E; // '~'
+const uint8_t END_MARKER = 0x7F;   // DEL (127)
+uint8_t buffer[sizeof(controller)];
+
+void logData() {
+  // Log the controller data to serial
+    Serial.println("Controller Data:");
+
+    // Left shoulder
+    Serial.println("LS (Left Shoulder):");
+    Serial.printf("  A0: %u, A3: %u, PB10: %u, A4: %u, B13: %u, A5: %u\n", 
+                  controller.LS.A0, controller.LS.A3, controller.LS.PB10, 
+                  controller.LS.A4, controller.LS.B13, controller.LS.A5);
+
+    // Left dpad
+    Serial.println("LD (Left DPad):");
+    Serial.printf("  B12: %u, A6: %u, B2: %u, A7: %u\n",
+                  controller.LD.B12, controller.LD.A6, controller.LD.B2, controller.LD.A7);
+
+    // Right shoulder
+    Serial.println("RS (Right Shoulder):");
+    Serial.printf("  C13: %u, A1: %u, A12: %u, B9: %u, PB11: %u, B8: %u\n",
+                  controller.RS.C13, controller.RS.A1, controller.RS.A12, 
+                  controller.RS.B9, controller.RS.PB11, controller.RS.B8);
+
+    // Right dpad
+    Serial.println("RD (Right DPad):");
+    Serial.printf("  B3: %u, B5: %u, A15: %u, B4: %u\n",
+                  controller.RD.B3, controller.RD.B5, controller.RD.A15, controller.RD.B4);
+
+    // Alternate button
+    Serial.println("ALT (Alternate Button):");
+    Serial.printf("  A2: %u, C15: %u, C14: %u\n",
+                  controller.ALT.A2, controller.ALT.C15, controller.ALT.C14);
+
+    // Joystick
+    Serial.println("JOY (Joystick):");
+    Serial.printf("  BTN: %u, VALUE[0]: %u, VALUE[1]: %u\n",
+                  controller.JOY.BTN, controller.JOY.VALUE[0], controller.JOY.VALUE[1]);
+
+    // Encoder
+    Serial.println("ENC (Encoder):");
+    Serial.printf("  BTN: %u, VALUE: %u\n",
+                  controller.ENC.BTN, controller.ENC.VALUE);
+
+    Serial.println();
+}
+
+void loop() {
+    while (Serial2.available()) {
+        if (Serial2.read() == START_MARKER) { // Detect the start marker
+            // Manually discard the START_MARKER before reading the payload
+            if (Serial2.available() >= sizeof(controller)) { 
+                // Ensure enough data is available to read
+                Serial2.readBytes(buffer, sizeof(controller)); // Read the payload
+                Serial.printf("First byte: %x\n", buffer[0]);
+                memcpy(&controller, buffer, sizeof(controller)); // Copy to struct
+                // logData(); // Log parsed data
+            }
+        }
+    }
+}
