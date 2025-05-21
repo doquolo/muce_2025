@@ -11,27 +11,22 @@ int pwm2;
 
 #include "controller.h"
 
-#define tool1 21
+#define tool1 5
 #define tool2 22
 
 #define xservo 19
-#define rservo 18
 
 Servo stool1;
 Servo stool2;
 Servo xservo3;
-Servo rservo4;
 
 void attachServo()
 {
-  const int sg90minUs = 1000;
-  const int sg90maxUs = 2000;
   const int sg995minUs = 625;
   const int sg995maxUs = 2850;
-  stool1.attach(tool1, sg90minUs, sg90maxUs);
-  stool2.attach(tool2, sg90minUs, sg90maxUs);
+  stool1.attach(tool1, sg995minUs, sg995maxUs);
+  stool2.attach(tool2, sg995minUs, sg995maxUs);
   xservo3.attach(xservo, sg995minUs, sg995maxUs);
-  rservo4.attach(rservo, sg995minUs, sg995maxUs);
 }
 
 void initServo()
@@ -39,12 +34,10 @@ void initServo()
   stool1.setPeriodHertz(50);
   stool2.setPeriodHertz(50);
   xservo3.setPeriodHertz(50);
-  rservo4.setPeriodHertz(50);
   attachServo();
   stool1.write(0);
   stool2.write(0);
   xservo3.write(0);
-  rservo4.write(0);
 }
 
 void detachServo()
@@ -52,7 +45,6 @@ void detachServo()
   stool1.detach();
   stool2.detach();
   xservo3.detach();
-  rservo4.detach();
 }
 
 void setup()
@@ -71,7 +63,6 @@ const int servo_update_interval = 120;
 bool tool1_state = 0;
 bool tool2_state = 0;
 int xservo3_state = 45;
-bool rservo4_state = 0;
 
 void loop()
 {
@@ -83,8 +74,6 @@ void loop()
       tool1_state = !tool1_state;
     if (controller.RS.C13 == 1)
       tool2_state = !tool2_state;
-    if (controller.ENC.BTN == 0)
-      rservo4_state = !rservo4_state;
     if (controller.RD.B5 == 1)
     {
       xservo3_state = 0;
@@ -97,10 +86,9 @@ void loop()
     {
       xservo3_state = 45;
     }
-    stool1.write((tool1_state) ? 0 : 110);
-    stool2.write((tool2_state) ? 0 : 110);
+    stool1.write((tool1_state) ? 0 : 90);
+    stool2.write((tool2_state) ? 0 : 50);
     xservo3.write(xservo3_state);
-    rservo4.write((rservo4_state) ? 0 : 180);
     // detachServo();
   }
 
