@@ -4,10 +4,13 @@
 #include "motors.h"
 int m1dir = 0;
 int m2dir = 0;
-int speed = 1;
+int currentSpeed = 1;
 const float ROTATE_FACTOR = 0.8;
 int pwm1;
 int pwm2;
+const int speed[3] = {1, 120, 175};
+const int brakeValue = 254;
+int currentBrake = 254;
 
 #include "controller.h"
 
@@ -16,8 +19,12 @@ int pwm2;
 
 #define xservo 19
 
+const int st_timeout = 250;
 Servo stool1;
+uint64_t prev_st1 = 0;
 Servo stool2;
+uint64_t prev_st2 = 0;
+
 Servo xservo3;
 
 void attachServo()
@@ -55,10 +62,8 @@ void setup()
   initMotor();
   initController();
   initServo();
+  attachServo();
 }
-
-long long int prev_servo_update = 0;
-const int servo_update_interval = 120;
 
 bool tool1_state = 0;
 bool tool2_state = 0;
@@ -66,37 +71,40 @@ int xservo3_state = 45;
 
 void loop()
 {
-  if (millis() - prev_servo_update >= servo_update_interval)
+  if (controller.LS.A3 == 1 && millis() - prev_st1 >= st_timeout)
   {
-    prev_servo_update = millis();
-    attachServo();
-    if (controller.LS.A3 == 1)
-      tool1_state = !tool1_state;
-    if (controller.RS.C13 == 1)
-      tool2_state = !tool2_state;
-    if (controller.RD.B5 == 1)
-    {
-      xservo3_state = 0;
-    }
-    else if (controller.RD.A15 == 1)
-    {
-      xservo3_state = 180;
-    }
-    else
-    {
-      xservo3_state = 45;
-    }
-    stool1.write((tool1_state) ? 0 : 90);
-    stool2.write((tool2_state) ? 0 : 50);
-    xservo3.write(xservo3_state);
-    // detachServo();
+    prev_st1 = millis();
+    tool1_state = !tool1_state;
   }
+  if (controller.RS.C13 == 1 && millis() - prev_st2 >= st_timeout)
+  {
+    prev_st2 = millis();
+    tool2_state = !tool2_state;
+  }
+  if (controller.RD.B5 == 1)
+  {
+    xservo3_state = 0;
+  }
+  else if (controller.RD.A15 == 1)
+  {
+    xservo3_state = 180;
+  }
+  else
+  {
+    xservo3_state = 45;
+  }
+  stool1.write((tool1_state) ? 0 : 90);
+  stool2.write((tool2_state) ? 0 : 50);
+  xservo3.write(xservo3_state);
+  // detachServo();
 
   // doi toc
-  if (controller.RS.A12 == 1) speed = 1;
-  else if (controller.RS.B9 == 1) speed = 120;
-  else if (controller.RS.B8 == 1) speed = 175;
-
+  if (controller.RS.A12 == 1)
+    currentSpeed = speed[0];
+  else if (controller.RS.B9 == 1)
+    currentSpeed = speed[1];
+  else if (controller.RS.B8 == 1)
+    currentSpeed = speed[2];
 
   // quay tu dong
   if (controller.LS.A0 == 1)
@@ -104,8 +112,8 @@ void loop()
     // vi sai trai
     m1dir = 1;
     m2dir = 0;
-    pwm1 = (int)((float)speed * ROTATE_FACTOR);
-    pwm2 = (int)((float)speed * ROTATE_FACTOR);
+    pwm1 = (int)((float)currentSpeed * ROTATE_FACTOR);
+    pwm2 = (int)((float)currentSpeed * ROTATE_FACTOR);
     driveMotor(M1_DIR, M1_PWM, m1dir, pwm1);
     driveMotor(M2_DIR, M2_PWM, m2dir, pwm2);
   }
@@ -114,8 +122,8 @@ void loop()
     // vi sai phai
     m1dir = 0;
     m2dir = 1;
-    pwm1 = (int)((float)speed * ROTATE_FACTOR);
-    pwm2 = (int)((float)speed * ROTATE_FACTOR);
+    pwm1 = (int)((float)currentSpeed * ROTATE_FACTOR);
+    pwm2 = (int)((float)currentSpeed * ROTATE_FACTOR);
     driveMotor(M1_DIR, M1_PWM, m1dir, pwm1);
     driveMotor(M2_DIR, M2_PWM, m2dir, pwm2);
   }
@@ -126,38 +134,40 @@ void loop()
       // vi sai trai
       m1dir = 1;
       m2dir = 0;
-      pwm1 = (int)((float)speed * ROTATE_FACTOR);
-      pwm2 = (int)((float)speed * ROTATE_FACTOR);
+      pwm1 = (int)((float)currentSpeed * ROTATE_FACTOR);
+      pwm2 = (int)((float)currentSpeed * ROTATE_FACTOR);
     }
     else if (controller.RD.B4 == 1)
     {
       // vi sai phai
       m1dir = 0;
       m2dir = 1;
-      pwm1 = (int)((float)speed * ROTATE_FACTOR);
-      pwm2 = (int)((float)speed * ROTATE_FACTOR);
+      pwm1 = (int)((float)currentSpeed * ROTATE_FACTOR);
+      pwm2 = (int)((float)currentSpeed * ROTATE_FACTOR);
     }
     else
     {
       m1dir = 0;
       m2dir = 0;
-      pwm1 = speed;
-      pwm2 = speed;
+      pwm1 = currentSpeed;
+      pwm2 = currentSpeed;
     }
     if (controller.LD.A6 == 1)
     {
       driveMotor(M1_DIR, M1_PWM, m1dir, pwm1);
       driveMotor(M2_DIR, M2_PWM, m2dir, pwm2);
+      currentBrake = brakeValue;
     }
     else if (controller.LD.B2 == 1)
     {
       driveMotor(M1_DIR, M1_PWM, (m1dir == 1) ? 0 : 1, pwm1);
       driveMotor(M2_DIR, M2_PWM, (m2dir == 1) ? 0 : 1, pwm2);
+      currentBrake = 255;
     }
     else
     {
-      driveMotor(M1_DIR, M1_PWM, m1dir, 255);
-      driveMotor(M2_DIR, M2_PWM, m2dir, 255);
+      driveMotor(M1_DIR, M1_PWM, m1dir, currentBrake);
+      driveMotor(M2_DIR, M2_PWM, m2dir, currentBrake);
     }
   }
   delay(50);

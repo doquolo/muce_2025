@@ -55,14 +55,6 @@ CONTROLLER_READOUT controller;
 
 bool connected = 0;
 
-// void readMacAddress();
-
-// void logData();
-
-// void OnDataRecv(const uint8_t *mac, const uint8_t *incomingData, int len);
-
-// void initController();
-
 void readMacAddress()
 {
   uint8_t baseMac[6];
